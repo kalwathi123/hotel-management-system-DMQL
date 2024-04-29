@@ -9,20 +9,15 @@ DB_NAME = "hotel-management"
 DB_USER = "postgres"
 DB_PASSWORD = "XZpdAiEY1lB9f7rIfWMK"
 
-connection = ""
-
 def get_connection():
-    if connection == "":
-        connection = psycopg2.connect(
-            host=DB_HOST,
-            database=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD
-        )
-    return connection
+    return psycopg2.connect(
+        host=DB_HOST,
+        database=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD
+    )
 
-def fetch_table_columns(table_name):
-    conn = get_connection()
+def fetch_table_columns(conn, table_name):
     cur = conn.cursor()
     cur.execute(f"SELECT column_name FROM information_schema.columns WHERE table_name = '{table_name}'")
     columns = [column[0] for column in cur.fetchall()]
@@ -30,8 +25,7 @@ def fetch_table_columns(table_name):
     conn.close()
     return columns
 
-def execute_query(query):
-    conn = get_connection()
+def execute_query(conn, query):
     cur = conn.cursor()
     cur.execute(query)
     columns = [desc[0] for desc in cur.description]
@@ -41,6 +35,8 @@ def execute_query(query):
     return columns, data
 
 def main():
+    # Getting the connection
+    connection = get_connection()
     # Set page configuration
     st.set_page_config(
         page_title="Hospitality Management System",
@@ -202,7 +198,7 @@ def main():
         selected_columns = []
         for table in selected_tables:
             print("Inside", tables)
-            columns = fetch_table_columns(table)
+            columns = fetch_table_columns(connection, table)
             print(columns)
             selected_columns.extend(st.multiselect(f"Select columns from {table}", columns))
 
@@ -217,7 +213,7 @@ def main():
                 ORDER BY total_revenue DESC
                 LIMIT 10
                 """
-                columns, result = execute_query(query)
+                columns, result = execute_query(connection, query)
                 st.write("Top Performing Agents:")
                 st.table(pd.DataFrame(result, columns=columns))
 
@@ -236,7 +232,7 @@ GROUP BY
     rd.room_type;
 
                 """
-                columns, result = execute_query(query)
+                columns, result = execute_query(connection, query)
                 st.write("Average Length of Stay by Room Type:")
                 st.table(pd.DataFrame(result, columns=columns))
 
@@ -249,7 +245,7 @@ GROUP BY
                 JOIN reservationdetails rd ON bd.booking_id = rd.booking_id
                 GROUP BY hd.hotel_id
                 """
-                columns, result = execute_query(query)
+                columns, result = execute_query(connection, query)
                 st.write("Booking Cancellation Rate by Hotel:")
                 st.table(pd.DataFrame(result, columns=columns))
 
@@ -263,7 +259,7 @@ GROUP BY
                 GROUP BY cd.customer_classification, arrival_month
                 ORDER BY arrival_month
                 """
-                columns, result = execute_query(query)
+                columns, result = execute_query(connection, query)
                 st.write("Revenue by Customer Classification and Month:")
                 st.table(pd.DataFrame(result, columns=columns))
 
@@ -275,7 +271,7 @@ GROUP BY
                 JOIN hoteldetails hd ON bd.hotel_id = hd.hotel_id
                 GROUP BY ad.agent_id, hd.hotel_type
                 """
-                columns, result = execute_query(query)
+                columns, result = execute_query(connection, query)
                 st.write("Average Booking Price by Agent and Hotel Type:")
                 st.table(pd.DataFrame(result, columns=columns))
 
@@ -296,7 +292,7 @@ GROUP BY
     arrival_month;
 
                 """
-                columns, result = execute_query(query)
+                columns, result = execute_query(connection, query)
                 st.write("Occupancy Rate by Hotel and Month:")
                 st.table(pd.DataFrame(result, columns=columns))
 
@@ -314,7 +310,7 @@ GROUP BY
                 LEFT JOIN customerdetails cd ON bd.customer_id = cd.customer_id
                 GROUP BY acquisition_channel limit 100
                 """
-                columns, result = execute_query(query)
+                columns, result = execute_query(connection, query)
                 st.write("Customer Acquisition by Channel:")
                 st.table(pd.DataFrame(result, columns=columns))
 
@@ -325,7 +321,7 @@ GROUP BY
                 JOIN bookingdetails bd ON cd.customer_id = bd.customer_id
                 GROUP BY cd.customer_classification
                 """
-                columns, result = execute_query(query)
+                columns, result = execute_query(connection, query)
                 st.write("Average Lead Time by Market Segment:")
                 st.table(pd.DataFrame(result, columns=columns))
 
@@ -339,7 +335,7 @@ GROUP BY
                 GROUP BY hd.country, rd.room_type
                 ORDER BY hd.country, total_bookings DESC
                 """
-                columns, result = execute_query(query)
+                columns, result = execute_query(connection, query)
                 st.write("Room Type Preference by Country:")
                 st.table(pd.DataFrame(result, columns=columns))
 
@@ -351,7 +347,7 @@ GROUP BY
                 GROUP BY cd.customer_id
                 HAVING COUNT(bd.booking_id) > 1 limit 100
                 """
-                columns, result = execute_query(query)
+                columns, result = execute_query(connection, query)
                 st.write("Repeat Guest Analysis:")
                 st.table(pd.DataFrame(result, columns=columns))
 
@@ -382,7 +378,7 @@ GROUP BY
             ORDER BY total_revenue DESC
             LIMIT 10
             """
-            columns, result = execute_query(query)
+            columns, result = execute_query(connection, query)
             df = pd.DataFrame(result, columns=columns)
 
             st.markdown('<div class="title">Top Performing Agents</div>', unsafe_allow_html=True)
@@ -398,7 +394,7 @@ GROUP BY
             GROUP BY arrival_date_month
             ORDER BY arrival_date_month
             """
-            columns, result = execute_query(query)
+            columns, result = execute_query(connection, query)
             df = pd.DataFrame(result, columns=columns)
             
             # Create a mapping of month names to integer values
@@ -443,7 +439,7 @@ JOIN BookingDetails b ON h.hotel_id = b.hotel_id
 GROUP BY h.hotel_id, h.hotel_type, h.city
 ORDER BY total_bookings DESC limit 10;
             """
-            columns, result = execute_query(query)
+            columns, result = execute_query(connection, query)
             df = pd.DataFrame(result, columns=columns)
 
             st.markdown('<div class="title">High Performing Hotel by number of bookings</div>', unsafe_allow_html=True)
@@ -479,7 +475,7 @@ ORDER BY total_bookings DESC limit 10;
             ORDER BY average_waiting_list DESC
             LIMIT 5
             """
-            columns, result = execute_query(query)
+            columns, result = execute_query(connection, query)
             df = pd.DataFrame(result, columns=columns)
             
             st.markdown('<div class="title">Hotels with High Demand (Based on Waiting List)</div>', unsafe_allow_html=True)
@@ -500,7 +496,7 @@ ORDER BY total_bookings DESC limit 10;
             ORDER BY
                 average_lead_time DESC
             """
-            columns, result = execute_query(query)
+            columns, result = execute_query(connection, query)
             df = pd.DataFrame(result, columns=columns)
 
             st.markdown('<div class="title">Average Lead Time by Customer Market Segment</div>', unsafe_allow_html=True)
@@ -522,7 +518,7 @@ ORDER BY total_bookings DESC limit 10;
             ORDER BY
                 hd.hotel_type, average_price DESC
             """
-            columns, result = execute_query(query)
+            columns, result = execute_query(connection, query)
             df = pd.DataFrame(result, columns=columns)
 
             st.markdown('<div class="title">Average Booking Price by Hotel Type and Agent</div>', unsafe_allow_html=True)
@@ -544,7 +540,7 @@ ORDER BY total_bookings DESC limit 10;
             ORDER BY
                 total_revenue DESC
             """
-            columns, result = execute_query(query)
+            columns, result = execute_query(connection, query)
             df = pd.DataFrame(result, columns=columns)
 
             st.markdown('<div class="title">Average Booking Durations by Room Type</div>', unsafe_allow_html=True)
