@@ -9,13 +9,17 @@ DB_NAME = "hotel-management"
 DB_USER = "postgres"
 DB_PASSWORD = "XZpdAiEY1lB9f7rIfWMK"
 
+connection = ""
+
 def get_connection():
-    return psycopg2.connect(
-        host=DB_HOST,
-        database=DB_NAME,
-        user=DB_USER,
-        password=DB_PASSWORD
-    )
+    if connection == "":
+        connection = psycopg2.connect(
+            host=DB_HOST,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD
+        )
+    return connection
 
 def fetch_table_columns(table_name):
     conn = get_connection()
@@ -197,7 +201,9 @@ def main():
         # Dropdown list for column selection
         selected_columns = []
         for table in selected_tables:
+            print("Inside", tables)
             columns = fetch_table_columns(table)
+            print(columns)
             selected_columns.extend(st.multiselect(f"Select columns from {table}", columns))
 
         if selected_tables and selected_columns:
