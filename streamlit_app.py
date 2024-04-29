@@ -4,10 +4,10 @@ import psycopg2
 import altair as alt
 
 # Database connection details
-DB_HOST = "hotel-management-system-dmql.c9q8ye2ssfol.us-east-2.rds.amazonaws.com"
-DB_NAME = "hotel-management"
+DB_HOST = "hotel-management-system.c9q8ye2ssfol.us-east-2.rds.amazonaws.com"
+DB_NAME = "Hotel_Management"
 DB_USER = "postgres"
-DB_PASSWORD = "XZpdAiEY1lB9f7rIfWMK"
+DB_PASSWORD = "iDNI6m0mtvai6FQRncAg"
 
 def get_connection():
     return psycopg2.connect(
