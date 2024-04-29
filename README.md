@@ -27,7 +27,6 @@ The project website showcases the hotel management system and includes the follo
 - Home: Introduces the system's capabilities
 - About: Details the project's goals and challenges addressed
 - Analytics: Presents insights such as top performing agents and average lead time by customer market segment
-- Search: Allows for custom database queries
 
 ## Repository Structure
 - `sql/`: Contains SQL scripts for creating the database schema and queries
