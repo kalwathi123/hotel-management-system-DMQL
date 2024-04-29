@@ -2,10 +2,11 @@ import streamlit as st
 import pandas as pd
 import psycopg2
 import altair as alt
+import plotly.express as px
 
 # Database connection details
 DB_HOST = "hotel-management-system.c9q8ye2ssfol.us-east-2.rds.amazonaws.com"
-DB_NAME = "Hotel_Management"
+DB_NAME = "Hotel_management"
 DB_USER = "postgres"
 DB_PASSWORD = "iDNI6m0mtvai6FQRncAg"
 
@@ -187,173 +188,6 @@ def main():
 
         st.write("Explore the power of our system and take your hotel management to the next level!")
 
-    elif choice == "Search":
-        st.markdown('<div class="subheader">Search</div>', unsafe_allow_html=True)
-
-        # Dropdown list for table selection
-        tables = ["agentdetails", "hoteldetails", "customerdetails", "roomdetails", "reservationdetails", "bookingdetails"]
-        selected_tables = st.multiselect("Select tables", tables)
-
-        # Dropdown list for column selection
-        selected_columns = []
-        for table in selected_tables:
-            print("Inside", tables)
-            columns = fetch_table_columns(connection, table)
-            print(columns)
-            selected_columns.extend(st.multiselect(f"Select columns from {table}", columns))
-
-        if selected_tables and selected_columns:
-            # Generate analytical queries based on selected columns
-            if "agent_id" in selected_columns:
-                query = """
-                SELECT ad.agent_id, COUNT(bd.booking_id) AS total_bookings, SUM(bd.price) AS total_revenue
-                FROM agentdetails ad
-                JOIN bookingdetails bd ON ad.agent_id = bd.agent_id
-                GROUP BY ad.agent_id
-                ORDER BY total_revenue DESC
-                LIMIT 10
-                """
-                columns, result = execute_query(connection, query)
-                st.write("Top Performing Agents:")
-                st.table(pd.DataFrame(result, columns=columns))
-
-            if "room_type" in selected_columns:
-                query = """
-                SELECT
-    rd.room_type,
-    AVG(bd.stays_in_weekend_nights + bd.stays_in_week_nights) AS average_length_of_stay
-FROM
-    roomdetails rd
-JOIN
-    reservationdetails r ON rd.room_id = r.room_id
-JOIN
-    bookingdetails bd ON r.booking_id = bd.booking_id
-GROUP BY
-    rd.room_type;
-
-                """
-                columns, result = execute_query(connection, query)
-                st.write("Average Length of Stay by Room Type:")
-                st.table(pd.DataFrame(result, columns=columns))
-
-            if "hotel_id" in selected_columns and "reservation_status" in selected_columns:
-                query = """
-                SELECT hd.hotel_id, 
-                       COUNT(CASE WHEN rd.reservation_status = 'Canceled' THEN 1 END) * 100.0 / COUNT(*) AS cancellation_rate
-                FROM hoteldetails hd
-                JOIN bookingdetails bd ON hd.hotel_id = bd.hotel_id
-                JOIN reservationdetails rd ON bd.booking_id = rd.booking_id
-                GROUP BY hd.hotel_id
-                """
-                columns, result = execute_query(connection, query)
-                st.write("Booking Cancellation Rate by Hotel:")
-                st.table(pd.DataFrame(result, columns=columns))
-
-            if "customer_classification" in selected_columns and "price" in selected_columns:
-                query = """
-                SELECT cd.customer_classification, 
-                       DATE_TRUNC('month', TO_DATE(CONCAT(bd.arrival_date_year, '-', bd.arrival_date_month, '-', bd.arrival_date_day), 'YYYY-Month-DD')) AS arrival_month,
-                       SUM(bd.price) AS total_revenue
-                FROM customerdetails cd
-                JOIN bookingdetails bd ON cd.customer_id = bd.customer_id
-                GROUP BY cd.customer_classification, arrival_month
-                ORDER BY arrival_month
-                """
-                columns, result = execute_query(connection, query)
-                st.write("Revenue by Customer Classification and Month:")
-                st.table(pd.DataFrame(result, columns=columns))
-
-            if "agent_id" in selected_columns and "hotel_type" in selected_columns and "price" in selected_columns:
-                query = """
-                SELECT ad.agent_id, hd.hotel_type, AVG(bd.price) AS average_booking_price
-                FROM agentdetails ad
-                JOIN bookingdetails bd ON ad.agent_id = bd.agent_id
-                JOIN hoteldetails hd ON bd.hotel_id = hd.hotel_id
-                GROUP BY ad.agent_id, hd.hotel_type
-                """
-                columns, result = execute_query(connection, query)
-                st.write("Average Booking Price by Agent and Hotel Type:")
-                st.table(pd.DataFrame(result, columns=columns))
-
-            if "hotel_id" in selected_columns and "room_id" in selected_columns:
-                query = """
-                SELECT
-    hd.hotel_id,
-    DATE_TRUNC('month', TO_DATE(CONCAT(bd.arrival_date_year, '-', bd.arrival_date_month, '-', bd.arrival_date_day), 'YYYY-Month-DD')) AS arrival_month,
-    COUNT(bd.booking_id) * 100.0 / (COUNT(DISTINCT rd.room_id) * 30) AS occupancy_rate
-FROM
-    hoteldetails hd
-JOIN
-    bookingdetails bd ON hd.hotel_id = bd.hotel_id
-JOIN
-    reservationdetails rd ON bd.booking_id = rd.booking_id
-GROUP BY
-    hd.hotel_id,
-    arrival_month;
-
-                """
-                columns, result = execute_query(connection, query)
-                st.write("Occupancy Rate by Hotel and Month:")
-                st.table(pd.DataFrame(result, columns=columns))
-
-            if "agent_id" in selected_columns and "customer_id" in selected_columns:
-                query = """
-                SELECT 
-                    CASE 
-                        WHEN bd.agent_id IS NOT NULL THEN 'Agent'
-                        WHEN bd.customer_id IS NOT NULL THEN 'Direct'
-                        ELSE 'Unknown'
-                    END AS acquisition_channel,
-                    COUNT(bd.booking_id) AS total_bookings
-                FROM bookingdetails bd
-                LEFT JOIN agentdetails ad ON bd.agent_id = ad.agent_id
-                LEFT JOIN customerdetails cd ON bd.customer_id = cd.customer_id
-                GROUP BY acquisition_channel limit 100
-                """
-                columns, result = execute_query(connection, query)
-                st.write("Customer Acquisition by Channel:")
-                st.table(pd.DataFrame(result, columns=columns))
-
-            if "customer_classification" in selected_columns and "lead_time" in selected_columns:
-                query = """
-                SELECT cd.customer_classification AS market_segment, AVG(bd.lead_time) AS average_lead_time
-                FROM customerdetails cd
-                JOIN bookingdetails bd ON cd.customer_id = bd.customer_id
-                GROUP BY cd.customer_classification
-                """
-                columns, result = execute_query(connection, query)
-                st.write("Average Lead Time by Market Segment:")
-                st.table(pd.DataFrame(result, columns=columns))
-
-            if "country" in selected_columns and "room_type" in selected_columns:
-                query = """
-                SELECT hd.country, rd.room_type, COUNT(bd.booking_id) AS total_bookings
-                FROM hoteldetails hd
-                JOIN bookingdetails bd ON hd.hotel_id = bd.hotel_id
-                JOIN reservationdetails r ON bd.booking_id = r.booking_id
-                JOIN roomdetails rd ON r.room_id = rd.room_id
-                GROUP BY hd.country, rd.room_type
-                ORDER BY hd.country, total_bookings DESC
-                """
-                columns, result = execute_query(connection, query)
-                st.write("Room Type Preference by Country:")
-                st.table(pd.DataFrame(result, columns=columns))
-
-            if "customer_id" in selected_columns:
-                query = """
-                SELECT cd.customer_id, COUNT(bd.booking_id) AS total_bookings
-                FROM customerdetails cd
-                JOIN bookingdetails bd ON cd.customer_id = bd.customer_id
-                GROUP BY cd.customer_id
-                HAVING COUNT(bd.booking_id) > 1 limit 100
-                """
-                columns, result = execute_query(connection, query)
-                st.write("Repeat Guest Analysis:")
-                st.table(pd.DataFrame(result, columns=columns))
-
-        else:
-            st.write("Please select at least one table and one column.")
-
     elif choice == "Analytics":
         st.markdown('<div class="subheader">Analytics</div>', unsafe_allow_html=True)
 
@@ -365,7 +199,8 @@ GROUP BY
         "Hotels with High Demand (Based on Waiting List)",
         "Average Lead Time by Customer Market Segment",
         "Average Booking Price by Hotel Type and Agent",
-        "Average Booking Durations by Room Type"
+        "Average Booking Durations by Room Type",
+        "Total Bookings by Country"
         ]
         selected_query = st.sidebar.selectbox("Select an analytical query", analytical_queries)
 
@@ -461,26 +296,31 @@ ORDER BY total_bookings DESC limit 10;
             st.altair_chart(chart)
 
         
-        elif selected_query == "Hotels with High Demand (Based on Waiting List)":
+        elif selected_query == "High Performing Hotel by number of bookings":
             query = """
-            SELECT
-                h.hotel_id,
-                h.hotel_type,
-                h.city,
-                AVG(b.waiting_list) AS average_waiting_list
+            SELECT 
+                h.hotel_id, 
+                h.hotel_type, 
+                h.city, 
+                COUNT(b.booking_id) AS total_bookings
             FROM HotelDetails h
             JOIN BookingDetails b ON h.hotel_id = b.hotel_id
             GROUP BY h.hotel_id, h.hotel_type, h.city
-            HAVING AVG(b.waiting_list) > 0
-            ORDER BY average_waiting_list DESC
-            LIMIT 5
+            ORDER BY total_bookings DESC
+            LIMIT 10;
             """
             columns, result = execute_query(connection, query)
             df = pd.DataFrame(result, columns=columns)
+
+            st.markdown('<div class="title">High Performing Hotel by number of bookings</div>', unsafe_allow_html=True)
+            st.write("This pie chart shows the distribution of total bookings among the top 10 performing hotels:")
             
-            st.markdown('<div class="title">Hotels with High Demand (Based on Waiting List)</div>', unsafe_allow_html=True)
-            st.write("This table shows the top 5 hotels with the highest average waiting list, indicating high demand:")
-            st.table(df)
+            # Create a pie chart using plotly
+            fig = px.pie(df, values='total_bookings', names='hotel_id', title='Top 10 Performing Hotels by Number of Bookings')
+            
+            # Align the pie chart in the center of the webpage
+            st.plotly_chart(fig)
+
 
         elif selected_query == "Average Lead Time by Customer Market Segment":
             query = """
@@ -500,8 +340,14 @@ ORDER BY total_bookings DESC limit 10;
             df = pd.DataFrame(result, columns=columns)
 
             st.markdown('<div class="title">Average Lead Time by Customer Market Segment</div>', unsafe_allow_html=True)
-            st.write("This table shows the average lead time for each customer market segment, providing insights into booking behavior:")
-            st.table(df)
+            st.write("This spider chart shows the average lead time for each customer market segment, providing insights into booking behavior:")
+            
+            # Create a spider chart using plotly
+            fig = px.line_polar(df, r='average_lead_time', theta='customer_classification', line_close=True)
+            
+            # Show the spider chart
+            st.plotly_chart(fig)
+
 
         elif selected_query == "Average Booking Price by Hotel Type and Agent":
             query = """
@@ -517,13 +363,20 @@ ORDER BY total_bookings DESC limit 10;
                 hd.hotel_type, bd.agent_id
             ORDER BY
                 hd.hotel_type, average_price DESC
+            LIMIT 100
             """
             columns, result = execute_query(connection, query)
             df = pd.DataFrame(result, columns=columns)
 
             st.markdown('<div class="title">Average Booking Price by Hotel Type and Agent</div>', unsafe_allow_html=True)
-            st.write("This table shows the average booking price for each combination of hotel type and agent:")
-            st.table(df)
+            st.write("This sunburst chart shows the average booking price for each combination of hotel type and agent:")
+            
+            # Create a sunburst chart using plotly
+            fig = px.sunburst(df, path=['hotel_type', 'agent_id'], values='average_price')
+            
+            # Show the sunburst chart
+            st.plotly_chart(fig)
+
 
         elif selected_query == "Average Booking Durations by Room Type":
             query = """
@@ -539,13 +392,50 @@ ORDER BY total_bookings DESC limit 10;
                 rd.room_type
             ORDER BY
                 total_revenue DESC
+            LIMIT 100
             """
             columns, result = execute_query(connection, query)
             df = pd.DataFrame(result, columns=columns)
 
             st.markdown('<div class="title">Average Booking Durations by Room Type</div>', unsafe_allow_html=True)
-            st.write("This table shows the average booking duration and total revenue for each room type:")
-            st.table(df)
+            st.write("This trend chart shows the average booking duration and total revenue for each room type:")
+            
+            # Create a trend chart using plotly
+            fig = px.line(df, x='room_type', y='average_stay_duration', title='Average Booking Durations by Room Type', labels={'average_stay_duration': 'Average Stay Duration'})
+            
+            # Add a secondary y-axis for total revenue
+            fig.add_trace(px.line(df, x='room_type', y='total_revenue', title='Total Revenue', labels={'total_revenue': 'Total Revenue'}).data[0])
+            fig.update_yaxes(title_text="Total Revenue", secondary_y=True)
+            
+            # Show the trend chart
+            st.plotly_chart(fig)
+            
+        elif selected_query == "Total Bookings by Country":
+            query = """
+            SELECT HotelDetails.country, COUNT(*) AS total_bookings
+            FROM BookingDetails
+            JOIN HotelDetails ON BookingDetails.hotel_id = HotelDetails.hotel_id
+            GROUP BY HotelDetails.country
+            ORDER BY COUNT(*) DESC;
+            """
+            columns, result = execute_query(connection, query)
+            df = pd.DataFrame(result, columns=columns)
+
+            st.markdown('<div class="title">Total Bookings by Country</div>', unsafe_allow_html=True)
+            st.write("This map shows the total bookings by country. Hover over each country to see the total bookings:")
+            
+            # Create a choropleth map using plotly
+            fig = px.choropleth(df, 
+                                locations='country', 
+                                locationmode='country names', 
+                                color='total_bookings', 
+                                hover_name='country', 
+                                color_continuous_scale=px.colors.sequential.Plasma,
+                                title='Total Bookings by Country')
+            
+            # Show the map
+            st.plotly_chart(fig)
+
 
             
     elif choice == "About":
