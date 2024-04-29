@@ -6,7 +6,7 @@ import plotly.express as px
 
 # Database connection details
 DB_HOST = "hotel-management-system.c9q8ye2ssfol.us-east-2.rds.amazonaws.com"
-DB_NAME = "Hotel_management"
+DB_NAME = "Hotel_Management"
 DB_USER = "postgres"
 DB_PASSWORD = "iDNI6m0mtvai6FQRncAg"
 
@@ -154,7 +154,7 @@ def main():
     st.write("Welcome to the Hospitality Management System, your one-stop solution for optimizing hotel operations and maximizing revenue.")
 
     # Sidebar menu
-    menu = ["Home", "Search", "Analytics", "About"]
+    menu = ["Home", "Analytics", "About"]
     choice = st.sidebar.selectbox("Select a page", menu)
 
     if choice == "Home":
@@ -196,9 +196,8 @@ def main():
             "Top Performing Agents",
         "Total Bookings by Month",
         "High Performing Hotel by number of bookings",
-        "Hotels with High Demand (Based on Waiting List)",
         "Average Lead Time by Customer Market Segment",
-        "Average Booking Price by Hotel Type and Agent",
+        "Average Booking Price for airport hotel and their Agent",
         "Average Booking Durations by Room Type",
         "Total Bookings by Country"
         ]
@@ -295,32 +294,6 @@ ORDER BY total_bookings DESC limit 10;
 
             st.altair_chart(chart)
 
-        
-        elif selected_query == "High Performing Hotel by number of bookings":
-            query = """
-            SELECT 
-                h.hotel_id, 
-                h.hotel_type, 
-                h.city, 
-                COUNT(b.booking_id) AS total_bookings
-            FROM HotelDetails h
-            JOIN BookingDetails b ON h.hotel_id = b.hotel_id
-            GROUP BY h.hotel_id, h.hotel_type, h.city
-            ORDER BY total_bookings DESC
-            LIMIT 10;
-            """
-            columns, result = execute_query(connection, query)
-            df = pd.DataFrame(result, columns=columns)
-
-            st.markdown('<div class="title">High Performing Hotel by number of bookings</div>', unsafe_allow_html=True)
-            st.write("This pie chart shows the distribution of total bookings among the top 10 performing hotels:")
-            
-            # Create a pie chart using plotly
-            fig = px.pie(df, values='total_bookings', names='hotel_id', title='Top 10 Performing Hotels by Number of Bookings')
-            
-            # Align the pie chart in the center of the webpage
-            st.plotly_chart(fig)
-
 
         elif selected_query == "Average Lead Time by Customer Market Segment":
             query = """
@@ -344,12 +317,13 @@ ORDER BY total_bookings DESC limit 10;
             
             # Create a spider chart using plotly
             fig = px.line_polar(df, r='average_lead_time', theta='customer_classification', line_close=True)
-            
+            fig.update_layout(width=1200, height=700, margin=dict(l=50, r=50, t=50, b=50))
+
             # Show the spider chart
             st.plotly_chart(fig)
 
 
-        elif selected_query == "Average Booking Price by Hotel Type and Agent":
+        elif selected_query == "Average Booking Price for airport hotel and their Agent":
             query = """
             SELECT
                 hd.hotel_type,
@@ -369,11 +343,13 @@ ORDER BY total_bookings DESC limit 10;
             df = pd.DataFrame(result, columns=columns)
 
             st.markdown('<div class="title">Average Booking Price by Hotel Type and Agent</div>', unsafe_allow_html=True)
-            st.write("This sunburst chart shows the average booking price for each combination of hotel type and agent:")
+            st.write("This sunburst chart shows the average booking price for airport hotel combination of hotel type and agent:")
             
             # Create a sunburst chart using plotly
             fig = px.sunburst(df, path=['hotel_type', 'agent_id'], values='average_price')
             
+            fig.update_layout(width=1200, height=700, margin=dict(l=50, r=50, t=50, b=50))
+
             # Show the sunburst chart
             st.plotly_chart(fig)
 
@@ -400,15 +376,16 @@ ORDER BY total_bookings DESC limit 10;
             st.markdown('<div class="title">Average Booking Durations by Room Type</div>', unsafe_allow_html=True)
             st.write("This trend chart shows the average booking duration and total revenue for each room type:")
             
-            # Create a trend chart using plotly
-            fig = px.line(df, x='room_type', y='average_stay_duration', title='Average Booking Durations by Room Type', labels={'average_stay_duration': 'Average Stay Duration'})
+            # Create a period chart using plotly
+            fig = px.scatter(df, x='average_stay_duration', y='total_revenue', color='room_type',
+                title='Average Booking Durations and Total Revenue by Room Type',
+                labels={'average_stay_duration': 'Average Stay Duration', 'total_revenue': 'Total Revenue'})
+
+            fig.update_layout(width=1200, height=700, margin=dict(l=50, r=50, t=50, b=50))
+
             
-            # Add a secondary y-axis for total revenue
-            fig.add_trace(px.line(df, x='room_type', y='total_revenue', title='Total Revenue', labels={'total_revenue': 'Total Revenue'}).data[0])
-            fig.update_yaxes(title_text="Total Revenue", secondary_y=True)
-            
-            # Show the trend chart
-            st.plotly_chart(fig)
+            # Show the period chart
+            st.write(fig, unsafe_allow_html=True, style="text-align: center;")
             
         elif selected_query == "Total Bookings by Country":
             query = """
