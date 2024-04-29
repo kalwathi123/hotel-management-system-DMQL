@@ -22,7 +22,7 @@ def fetch_table_columns(conn, table_name):
     cur.execute(f"SELECT column_name FROM information_schema.columns WHERE table_name = '{table_name}'")
     columns = [column[0] for column in cur.fetchall()]
     cur.close()
-    conn.close()
+    # conn.close()
     return columns
 
 def execute_query(conn, query):
@@ -31,7 +31,7 @@ def execute_query(conn, query):
     columns = [desc[0] for desc in cur.description]
     data = cur.fetchall()
     cur.close()
-    conn.close()
+    # conn.close()
     return columns, data
 
 def main():
