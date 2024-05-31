@@ -3,8 +3,6 @@
 ## Overview
 This project aims to develop a database system to streamline and optimize hotel management operations. The system addresses key challenges such as centralizing booking management, maintaining guest profiles, optimizing room inventory, managing partner relationships, and enabling data-driven decision making through reporting and analytics.
 
-Live website: https://hotel-management-system-dmql-vmb5gaj9ulnbhmnetrh9yh.streamlit.app/
-
 ## Dataset
 The project utilizes the "Hotel Booking Demand" dataset from Kaggle. The dataset was preprocessed using Python and Excel to handle null values and add custom price and city columns.
 
